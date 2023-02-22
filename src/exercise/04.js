@@ -2,15 +2,30 @@
 // http://localhost:3000/isolated/exercise/04.js
 
 import * as React from 'react'
+import { useLocalStorageState } from '../utils';
+
+
 
 function Board() {
-  // 🐨 squares is the state for this component. Add useState for squares
-  const squares = Array(9).fill(null)
 
+  // 🐨 squares is the state for this component. Add useState for squares
+  const [history, setHistory] = useLocalStorageState('history', [[null, null, null, null, null, null, null, null, null]]);
+  const [current, setCurrent] = useLocalStorageState('current', 0);
+  
   // 🐨 We'll need the following bits of derived state:
   // - nextValue ('X' or 'O')
   // - winner ('X', 'O', or null)
   // - status (`Winner: ${winner}`, `Scratch: Cat's game`, or `Next player: ${nextValue}`)
+
+  let squares = history[+current];
+  let nextValue = calculateNextValue(squares);
+  let winner = calculateWinner(squares);
+  let status = calculateStatus(winner, squares, nextValue);
+
+  React.useEffect(()=>{
+    window.localStorage.setItem('history', JSON.stringify(history));
+    window.localStorage.setItem('current', JSON.stringify(current));
+  }, [history, current]);
   // 💰 I've written the calculations for you! So you can use my utilities
   // below to create these variables
 
@@ -20,12 +35,26 @@ function Board() {
     // 🐨 first, if there's already winner or there's already a value at the
     // given square index (like someone clicked a square that's already been
     // clicked), then return early so we don't make any state changes
+    if(winner !== null || squares[square] !== null){
+      return;
+    }
+
     //
     // 🦉 It's typically a bad idea to mutate or directly change state in React.
     // Doing so can lead to subtle bugs that can easily slip into production.
     //
     // 🐨 make a copy of the squares array
     // 💰 `[...squares]` will do it!)
+    let nsquares = [...squares];
+    nsquares[square] = nextValue;
+    let nhistory = [];
+    for(let i = 0;i<= Number(current) ;i++){
+      nhistory.push(history[i]);
+    }
+    nhistory.push(nsquares);
+    console.log(nhistory);
+    setHistory(nhistory);
+    setCurrent(current+1);
     //
     // 🐨 set the value of the square that was selected
     // 💰 `squaresCopy[square] = nextValue`
@@ -36,6 +65,8 @@ function Board() {
   function restart() {
     // 🐨 reset the squares
     // 💰 `Array(9).fill(null)` will do it!
+    setHistory([[null, null, null, null, null, null, null, null, null]]);
+    setCurrent(0);
   }
 
   function renderSquare(i) {
@@ -49,7 +80,7 @@ function Board() {
   return (
     <div>
       {/* 🐨 put the status in the div below */}
-      <div className="status">STATUS</div>
+      
       <div className="board-row">
         {renderSquare(0)}
         {renderSquare(1)}
@@ -68,6 +99,22 @@ function Board() {
       <button className="restart" onClick={restart}>
         restart
       </button>
+
+      <div className='game-info'>
+        <div className="status">{status}</div>
+        <ul>
+          {history.map((item, index)=>{
+            let disabled = false;
+            if(index === current){
+              disabled = true;
+            }
+            if(index === 0)
+              return <li key={index}><button disabled={disabled} onClick={() => setCurrent(index)}>Go to game Start{disabled?"(current)": null}</button></li>
+            else 
+              return <li key={index}><button disabled={disabled} onClick={() => setCurrent(index)}>Go to move #{index}{disabled?"(current)": null}</button></li>
+          })}
+        </ul>
+      </div>
     </div>
   )
 }
